@@ -1,0 +1,487 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>reveal.js</title>
+
+    <link rel="stylesheet" href="css/reveal.css">
+    <link rel="stylesheet" href="css/theme/black.css">
+
+    <!-- Theme used for syntax highlighting of code -->
+    <link rel="stylesheet" href="lib/css/zenburn.css">
+
+    <!-- Printing and PDF exports -->
+    <script>
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = window.location.search.match(/print-pdf/gi) ? 'css/print/pdf.css' : 'css/print/paper.css';
+        document.getElementsByTagName('head')[0].appendChild(link);
+
+
+
+
+
+
+
+    </script>
+</head>
+<body>
+<body>
+<div class="reveal">
+    <div class="slides">
+        <section>
+            <h2>DingerDB: A modern baseball database and analytics platform</h2>
+
+            <p>https://www.DingerDB.com</p>
+        </section>
+        <section>
+            <h3>Brad Hurley</h3>
+            <ul>
+                <li>Developer at IBM Watson Health</li>
+                <li>Twitter: @sqlBrad</li>
+                <li>Cleveland Indians Fan</li>
+                <li>I like data and beer</li>
+            </ul>
+        </section>
+        <section>
+            <h3>Carter Danko</h3>
+            <ul>
+                <li>Developer at IBM Watson Health</li>
+                <li>Email: carter.danko@gmail.com</li>
+                <li>Twitter: @cmdanko</li>
+                <li>Will code for beer</li>
+            </ul>
+        </section>
+        <section>
+            <h1>What is DingerDB</h1>
+            <aside class="notes">
+                Has everyone or anyone here seen or read moneyball?<br>
+                The premise is you can be succesfully building a team using evidence based analytical approach.<br>
+                The previous mindset was ranking players based on outdated stats like stolen bases, RBI, and batting averages.<br>
+                Onbase percentage and slugging percentage are considered more valuable metrics today.<br>
+                This new style of research is often called Sabermetrics.  Society for American Baseball Research<br>
+                DingerDB is an attempt at creating a modern publicly available baseball analytics platform.<br>
+                The rest of the slides will focus on how we acquire and process data<br>
+                Finally, ending with a demo of what it all looks like from the end user perspective.
+            </aside>
+        </section>
+        <section>
+            <h4>By The Numbers</h4>
+            <table>
+                <thead>
+                <td>Data Type</td>
+                <td>Row Counts</td>
+                </thead>
+                <tr>
+                    <td>Players</td>
+                    <td>22,000+</td>
+                </tr>
+                <tr>
+                    <td>Games</td>
+                    <td>25,000+</td>
+                </tr>
+                <tr>
+                    <td>Pitches</td>
+                    <td>7,000,000+</td>
+                </tr>
+                <tr>
+                    <td>Venues</td>
+                    <td>90+</td>
+                </tr>
+                <tr>
+                    <td>Pick Off Attempts</td>
+                    <td>190,000+</td>
+                </tr>
+                <tr>
+                    <td>At Bats</td>
+                    <td>2,000,000+</td>
+                </tr>
+                <tr>
+                    <td>Innings</td>
+                    <td>200,000+</td>
+                </tr>
+                <tr>
+                    <td>Line Scores</td>
+                    <td>250,000+</td>
+                </tr>
+                <tr>
+                    <td>Base Runners</td>
+                    <td>1,700,000+</td>
+                </tr>
+            </table>
+            <aside class="notes">
+                All of the data is for 2008 to current except for players. We back loaded historical data.<br>
+                Nightly data pulls provide us with a near (close) to real time solution.<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Inspiration</h2>
+            <ul>
+                <li>RetroSheets</li>
+                <li>Lahman Database</li>
+            </ul>
+            <aside class="notes">
+                The inspiration for this project is kind of two pronged. <br>
+                The original idea was to create a twitter bot based on real time information,<br>
+                but I actually found it to be difficult to find a reliable source of real or near real time baseball
+                information.<br>
+                The second desire was finding an accurate usable data set for baseball analytics.<br>
+                Retrosheets and the Lahman database are great for what they are, but are manually generated and can be
+                cumbersome to use.<br>  The lahman database is only refreshed annually, and has a confusing data model with inaccurate data types.<br>
+                Retrosheets is mostly manaually maintained by people scoring baseball games by rewatching the games, or analyzing historical score books.<br>
+                Retro uses their own fielding positions and also stores in CSV.
+            </aside>
+        </section>
+        <section>
+            <h2>Tech Stack</h2>
+            <ul>
+                <li>Python</li>
+                <li>MySQL</li>
+                <li>Superset</li>
+                <li>Docker</li>
+                <li>Amazon AWS</li>
+                <li>Jenkins</li>
+                <li>Redis</li>
+            </ul>
+            <aside class="notes">
+                Python3 - Used for all of the application code.<br>
+                MySQL - The backend database<br>
+                Apache Superset is also written in Python and is used as the front end<br>
+                Docker - Deploy Containers<br>
+                Amazon AWS - Hosting <br>
+                Jenkins - Glorified Cron Scheduler<br>
+                Redis - Used for downloading data<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Data Acquisitions Process</h2>
+            <ul>
+                <li>Flat files on webserver</li>
+                <li>Folder based on year/month/day</li>
+                <li>Walk os tree
+                    <ul>
+                        <li>Store URL</li>
+                    </ul>
+                <li>Separate parallel process downloads files</li>
+            </ul>
+            <aside class="notes">
+                Under each year/month/day is a folder with a unique game id listing the teams playing<br>
+                Sometimes though the folder is created for a game that is scheduled but not played yet(playoffs)<br>
+                Historical process download that writes to redis is "bruteforce" in that it slams the server over and over attempting to<br>
+                write all of the file locations to redis, found this to be quicker than finding files and then
+                downloading<br>
+                This was mostly due to we could walk the tree randomly in parallel, and write the files to redis, since
+                it<br>
+                is a hash nothing would happen if you overwrote anything so we could guarantee that all the files in
+                redis<br>
+                are the files that are present on the server and need to be downloaded<br>
+                This allows for a parallel process to read redis and then download the files<br>
+                Instead of having a network hiccup staling the other threads, it just tries again<br>
+                without holding up other downloading threads<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Raw Data</h2>
+            <h4>JSON :)</h4>
+            <h4>XML :(</h4>
+            <aside class="notes">
+                ML-BAM = Major League Baseball Advance Media<br>
+                They don't document anything, so thats helpful.<br>
+                We found a few helpful endpoints that return player and team data.<br>
+                Probably a major reason why nobody has attempted something similar.<br>
+                We used lxml library for xml parsing<br>
+                and the json library for json parsing<br>
+                This data is intended to feed MLB websites and mobile applications such as MLB AtBat.
+            </aside>
+        </section>
+        <section>
+            <h2>At Bat</h2>
+            <img src="images/at_bat.png">
+            <aside class="notes">
+                Raw data representing an At Bat
+            </aside>
+        </section>
+        <section>
+            <h2>Roster</h2>
+            <img src="images/roster.png">
+            <aside class="notes">
+                Raw data showing a portion of a teams Roster
+            </aside>
+        </section>
+        <section>
+            <h2>Player</h2>
+            <img src="images/player.png">
+            <aside class="notes">
+                Raw player data
+            </aside>
+        </section>
+        <section>
+            <h2>Data Model</h2>
+            Classes defined in Python using SQLAlchemy
+            <pre><code data-trim data-noescape>
+class AtBat(Base):
+    __tablename__ = "at_bat"
+    id = Column(Integer, primary_key=True)
+    game_join_id = Column(Integer)
+    home_team_runs = Column(Integer)
+    away_team_runs = Column(Integer)
+    b = Column(Integer)
+    s = Column(Integer)
+    o = Column(Integer)
+    on_1b = Column(Integer)
+    on_2b = Column(Integer)
+    on_3b = Column(Integer)
+    des = Column(String(450))
+    event_num = Column(Integer)
+    pitcher = Column(Integer)
+    batter = Column(Integer)
+    num = Column(Integer)
+    start_tfs_zulu = Column(TIMESTAMP)
+    start_tfs = Column(Time)
+    event = Column(String(50))
+    play_guid = Column(String(36))
+    stand = Column(String(1))
+    b_height = Column(String(4))
+    p_throws = Column(String(1))
+                </code></pre>
+            <aside class="notes">
+                SQLAlchemy is an Object Relational Mapper or ORM for those not familiar it allows you to interact with
+                database rows as python objects.<br>
+                Based on the objects derived from raw json and xml files that we decided to add to our overall database
+                model we had to create a corresponding Python class that extends the SQLAlchemy declarative base.
+                <br>
+                There can be some additional performance overhead of using an ORM, but for us we felt the benefits out
+                weighed
+                any negatives.<br>
+                We get automatic database object creation when a SQLAlchemy session is opened.<br>
+                SQLAlchemy will use the class definition to issue a create if not exist statement to the database.
+            </aside>
+        </section>
+        <section>
+            <h2>Data Processing/Parsing</h2>
+            <pre><code data-trim data-noescape>
+# Example Usage
+team_parser = TeamParser(path=TEAM_URL)
+team_parser.parse()
+
+# TeamParser Snippet
+class TeamParser(Parser):
+
+    def parse(self):
+        teams = Utilities.get_distinct_values("team", "team_id")
+
+        data = self.get_data()
+        root = etree.fromstring(data)
+
+        for element in root.iter():
+            if element.tag == 'team':
+                team = Team()
+                team.aws_club_slug = element.get('aws_club_slug')
+                team.mobile_url = element.get('mobile_url')
+                team.mobile_es_url = element.get('mobile_es_url')
+                team.mobile_url_base = element.get('mobile_url_base')
+                team.id = element.get('id')
+                </code></pre>
+            <aside class="notes">
+                I created a Parser Abstract Base Class that implemented two method<br>
+                get_data<br>
+                get_local_data<br>
+                and a Abstract Class Method Parse<br>
+                This makes parsing and loading data as simple as passing a path and calling parse.<br>
+                The parse methods can implement additional logic when necessary.
+            </aside>
+        </section>
+        <section>
+            <h2>Hosting</h2>
+            <ul>
+                <li>AWS
+                    <ul>
+                        <li>RDBMS isolated</li>
+                        <li>Cluster of Docker machines</li>
+                        <ul>
+                            <li>Superset hosts</li>
+                        </ul>
+                        <li>Treat the servers like cattle not pets
+                    </ul>
+            </ul>
+            <aside class="notes">
+                Should be able to destroy servers and spin them back up fresh<br>
+                Aside from docker which revolves around this, we use ansible for ssh-keys,users<br>
+                Ansible dynamic inventory is great for this as well with tags<br>
+                Can destroy recreate entire environment in under an hour<br>
+                Would ideally be below 5 minutes
+            </aside>
+        </section>
+        <section>
+          <h4>Superset Docker Config</h4>
+          <pre><code data-trim data-noescape>
+SQLALCHEMY_DATABASE_URI = 'mysql://USER:PASSWORD@IP_ADDRESS/schema'
+SECRET_KEY = 'APP_SECRET_KEY'
+APP_NAME = "DingerDB"
+LANGUAGES = {'en': {'flag': 'us', 'name': 'English'}}
+CACHE_DEFAULT_TIMEOUT = 30   # 30s default timeout
+ROW_LIMIT = 5000
+VIZ_ROW_LIMIT = 1000
+SQL_MAX_ROW = 2000
+DISPLAY_SQL_MAX_ROW = 1000
+CACHE_CONFIG = {
+    'CACHE_TYPE': 'redis',
+    'CACHE_DEFAULT_TIMEOUT': 30,
+    'CACHE_KEY_PREFIX': 'superset_',
+    'CACHE_REDIS_HOST': 'REDIS_IP',
+    'CACHE_REDIS_PORT': 6379,
+    'CACHE_REDIS_DB': 15,
+    'CACHE_REDIS_URL': 'redis://REDIS_IP:6379/15'
+}
+          </code></pre>
+        </section>
+        <section>
+            <h4>Bulk Loading Historical</h4>
+            <ul>
+                <li>Multi-Threading</li>
+                <li>Post Script</li>
+                <li>Static Data</li>
+            </ul>
+            <aside class="notes">
+                We were able to leverage the use of multi-threading since the order and type source files loaded didnt
+                matter.<br>
+                We also added a post execution step to our framework that creates or replaces all of the views we expose
+                to our end users<br>
+                The views allow us to control what columns get exposed if necessary.<br>
+                In the post scripts we also kick off any necessary permission grants and turning statements.<br>
+                We also created static data sets that make using the data easier.<br>
+                For Example we maintain a mapping of game types <br>
+                ('R', 'Regular'),<br>
+                ('A', 'All Star'),<br>
+                And all pitch classification/<br>
+                ('CH', 'Changeup'),<br>
+                ('FF', 'Four-Seam Fastball'),
+            </aside>
+        </section>
+        <section>
+            <h4>Daily Data Updates</h4>
+            <ul>
+                <li>Had all historical data downloaded/processed, but no insight into a game from a week ago</li>
+                <li>Created process to incrementally download and process data running on Jenkins</li>
+                <ul>
+                    <li>Jenkins instance, along with jenkins job and environment can be rebuilt in 5 minutes</li>
+                </ul>
+                <li>Download -> Redis -> Process -> Archive -> Cleanup</li>
+            </ul>
+            <aside class="notes">
+              Uses JSON file to keep track of which day process is currently on.<br>
+              Stores MD5 in redis with expiration, after retention is downloaded again,checked MD5, if different, reprocessed.<br>
+              All files are archived/targz and uploaded to s3<br>
+            </aside>
+        </section>
+        <section>
+            <h4>Issues</h4>
+            <ul>
+                <li>Dates, Times, and DateTime</li>
+                <li>Tracking What Has Been Processed</li>
+                <li>Generating Linking Keys</li>
+                <li>Generating Good Linking Keys</li>
+                <li>Adding Player Data</li>
+                <li>AWS Operations headbanging</li>
+                <li>Over Engineering</li>
+                <li>Time</li>
+            </ul>
+            <aside class="notes">
+                We only had a total of 7 different date, time, and date time formats to standardize.<br>
+                Working with dates can really be a pain.<br>
+                We created a files_processed table to track what source files have already been processed for a
+                game.<br>
+                This allowed us to process source files multiple times without the risk of potentially creating
+                duplicate rows.<br>
+                Generating Linking Keys and Generating Good Linking Keys was a bit of an issue.<br>
+                It turns out that when you are processing multiple source files they might not have a built-in linking
+                key<br>
+                It might also turn out that using GUIDs is really bad for performance as a join key.
+                The solution we implemented was to create a game id hash to validate if we had seen<br>
+                a game before, and then to maintain an external facing integer game join id.<br>
+                We did a historical pull of player data, but how do we manage new players?<br>
+                The parsers that might encounter player ids can do a check to see if the player id has been encountered
+                <br>
+                before and if not it makes a web service call and creates the missing player object.<br>
+                The game join ids are controlled in a similar way. We check based on the game hash if the game has been
+                seen before<br>
+                if so we use the assigned game join id else we get the next value from the counter.<br>
+                Neither of us are system engineers and only 1 of us had used aws before<br>
+                Tried using some of the new fancy AWS features when we didnt know what they did/how they worked<br>
+                Aside from work, we both have other obligations or side projects we work on as well so finding<br>
+                time to work on this was hard.
+            </aside>
+        </section>
+        <section>
+            <h4>Future</h4>
+            <ul>
+                <li>Open Source</li>
+                <li>Stand Alone Database</li>
+                <li>REST API</li>
+                <li>Public Access</li>
+                <li>Logo</li>
+                <li>Sell Out</li>
+            </ul>
+            <aside class="notes">
+                I am a big fan of OpenSource and giving back to the community.<br>
+                We just need to make sure if makes sense to throw this all into the wild<br>
+                I think some people would prefer a full local copy of the database, and have the ability to download
+                daily updates from us.<br>
+                Im not against this idea either, but it would need to be operationalized.<br>
+                Create a rest api/client to consume MLB data.<br>
+                Leave private beta and go full blown public access.<br>
+                DingerDB will feel like a real site when we have a logo<br> Can anyone draw a logo for like free?<br>
+                Sell Out?<br> I mean if you want to buy us thats cool.<br> We have a brief moment after our go-live that
+                we thought we might be working with MLB<br>
+                but unfortunately that kind of fizzled out.<br>
+            </aside>
+        </section>
+        <section>
+            <h4>Demo</h4>
+            <img src="images/demo-gods.jpg">
+            <aside class="notes">
+                If anyone wants an account after the demo just let us know.<br>
+                Free Hosting?<br>
+            </aside>
+        </section>
+        <section>
+            <h2>Questions</h2>
+            For access to https://www.DingerDB.com hit us up on twitter @dinger_db.
+        </section>
+
+    </div>
+</div>
+
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.js"></script>
+
+<script>
+    // More info about config & dependencies:
+    // - https://github.com/hakimel/reveal.js#configuration
+    // - https://github.com/hakimel/reveal.js#dependencies
+    Reveal.initialize({
+        dependencies: [
+            {src: 'plugin/markdown/marked.js'},
+            {src: 'plugin/markdown/markdown.js'},
+            {src: 'plugin/notes/notes.js', async: true},
+            {
+                src: 'plugin/highlight/highlight.js', async: true, callback: function () {
+                hljs.initHighlightingOnLoad();
+            }
+            }
+        ]
+    });
+
+
+
+
+
+
+
+</script>
+</body>
+</html>
